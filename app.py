@@ -1,17 +1,45 @@
-from flask import Flask
+"""Application factory for the Flask inference service."""
+
+from flask import Flask, jsonify
 from flask_cors import CORS
-# 初始化所有应用
-def create_app():
-    import models, routes, services, conf
+
+from conf.config import app_config, split_config
+
+
+def create_app(config=None):
+    """Create and configure the Flask application.
+
+    ``config`` may be a mapping (useful for tests) or a Flask config object.
+    Optional model dependencies are deliberately not imported at startup.
+    """
     app = Flask(__name__)
-    CORS(app, resources="/*") #开启跨域
-    app.config.from_object(conf.config.app_config)
-    #models.init_app(app)
-    routes.init_app(app)
-    #services.init_app(app)
+    app.config.from_object(app_config)
+    app.config.setdefault("SPLIT_CACHE_DIR", str(split_config.cache_dir))
+    app.config.setdefault("SPLIT_MODELS", split_config.merger_args)
+
+    if config is not None:
+        if isinstance(config, dict):
+            app.config.update(config)
+        else:
+            app.config.from_object(config)
+
+    CORS(app, resources={r"/*": {"origins": app.config["CORS_ORIGINS"]}})
+
+    from routes import init_app
+
+    init_app(app)
+
+    @app.get("/health")
+    def health():
+        return jsonify(status="ok")
+
     return app
 
 
-if __name__ == '__main__':
-    app = create_app()
-    app.run(host='0.0.0.0', debug=True,port=5000)
+if __name__ == "__main__":
+    application = create_app()
+    application.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=application.config["DEBUG"],
+    )

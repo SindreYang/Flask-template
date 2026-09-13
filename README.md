@@ -1,69 +1,63 @@
+# Flask inference service template
 
+A small Flask application factory with separated configuration and routes. The
+included route demonstrates how to accept a mesh, call an inference backend,
+and return generated files without relying on a developer-specific file path.
 
-<div align="center">
+## Install and run
 
-# Flask 模板
-<a href="https://cmake.org/"><img alt="Config: Cmake" src="https://img.shields.io/badge/config-cmake-brightgreen"></a>
-[![Conference](https://img.shields.io/badge/User-Sindre-orange)]()
-[![Conference](https://img.shields.io/badge/Update-2023-blue)]()
-
-</div>
-
-
-# 简介
-提供良好的Flask推理框架，减少配置时间。
-
-1. 前后端分离
-2. 服务，视图，模型分离
-3. 全局统一配置；
-
-![img.png](img.png)
-
-
-
-# 目录结构
-
+```bash
+python -m pip install -r requirements.txt
+python app.py
 ```
-├─.
-│  app.py                            # 用于启动flask服务
-│  README.md
-│  test.py                           # 用于测试函数是否正常
-│  
-├─conf                               # 全局配置目录
-│  │  config.py                      # 全局变量，主要用于函数调用
-│  └─  __init__.py 
-│  
-│          
-├─models                             # AI模型调用函数目录       
-│  │  Split_deploy.py                # 分割部署示例
-│  │  tools.py                       # 常用/复用函数
-│  └─  __init__.py                   # 导入相关函数
-│          
-├─resources                          # 静态资源目录
-│  └─cache                           # 上传/下载缓存文件 
-│                                   
-├─routes                             # 蓝图/路由目录
-│  │  split.py                       # 分割蓝图示例
-│  └─  __init__.py                   # 全局蓝图注册
-│  
-│          
-├─services                           # 个性化服务定制
-└─  __init__.py                      # 全局服务注册
-│          
-├─static                             # 前端静态资源
-├─templates                          # 前端html模板
-└─ui                                 # 前端界面渲染
 
+The service listens on port `5000`. Check that it started with:
 
+```bash
+curl http://127.0.0.1:5000/health
 ```
-# 使用指南
-1. 首先配置 **config.py**  添加相应信息。
-2. 在models下建立xxx_deploy.py，用于封装AI推理函数。
-3. 在resources下放置AI模型文件。
-4. 在routes定义调用路由。
 
-可选：
-*  services 定义不同调用的服务
-*  static  templates  ui 放入相应前端文件
+The response is `{"status":"ok"}`. Debug mode is off by default. Set
+`CORS_ORIGINS` to the frontend origin when deploying, for example
+`https://example.com`.
 
+## Segmentation example
 
+Send a `multipart/form-data` `POST` to `/split` with:
+
+| Field | Description |
+| --- | --- |
+| `file` | Required PLY, OBJ, or STL mesh, up to 100 MB |
+| `model` | One of the names configured in `conf/config.py` |
+| `constraints` | Optional integer from 1 to 1,000,000; defaults to 200,000 |
+| `refine_switch` | Optional `0` or `1`; defaults to `1` |
+
+On success, the response contains a job ID and download URLs for the PLY, OBJ,
+and MTL files that were generated. Each job has its own cache directory, so
+parallel requests do not overwrite one another. Use
+`GET /split/download/<job_id>/<artifact>` with `ply`, `obj`, or `mtl` as the
+artifact name.
+
+The model checkpoints and network implementation are not included in this
+repository. Until they are installed, the application and health endpoint still
+start normally, while inference requests return a clear `503` response.
+
+## Tests
+
+```bash
+python -m unittest discover -s tests -v
+# or, for older workflows:
+python test.py
+```
+
+## Project layout
+
+```text
+app.py                 Flask application factory and health check
+conf/config.py         App defaults and model checkpoint map
+models/                Inference implementation and mesh utilities
+routes/                Implemented HTTP endpoints
+services/              Optional service integrations
+tests/                 Isolated route and application tests
+resources/cache/       Per-job upload and result files (created at runtime)
+```
