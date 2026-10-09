@@ -61,3 +61,6 @@ services/              Optional service integrations
 tests/                 Isolated route and application tests
 resources/cache/       Per-job upload and result files (created at runtime)
 ```
+# 迁移说明
+
+本模板已迁移并重构至 [`SindreTemplate`](https://github.com/SindreYang/SindreTemplate/tree/template/flask) 的 `template/flask` 分支。该仓库保留历史记录，不再作为新项目的推荐起点。
